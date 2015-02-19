@@ -154,7 +154,7 @@ class Watcher(object):
         elif self.test_program == 'tox':
             cmd = 'tox'
         # Add custom prefix to the start of the command.
-        if self.prefix:
+        if cmd and self.prefix:
             cmd = ' '.join([self.prefix, cmd])
 
         if not cmd:
