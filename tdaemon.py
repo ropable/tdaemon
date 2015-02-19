@@ -19,9 +19,8 @@ import hashlib
 import subprocess
 import datetime
 import re
-import subprocess
 
-SPECIAL_CHARS_REGEX_PATTERN = r'[#&;`|*?~<>^()\[\]{}$\\]+' 
+SPECIAL_CHARS_REGEX_PATTERN = r'[#&;`|*?~<>^()\[\]{}$\\]+'
 IGNORE_EXTENSIONS = ('pyc', 'pyo')
 IGNORE_DIRS = ('.bzr', '.git', '.hg', '.darcs', '.svn', '.tox')
 IMPLEMENTED_TEST_PROGRAMS = ('nose', 'nosetests', 'django', 'py', 'symfony',
@@ -53,7 +52,8 @@ def ask(message='Are you sure? [y/N]'):
 def escapearg(args):
     """Escapes characters you don't want in arguments (preventing shell
     injection)"""
-    return re.sub(SPECIAL_CHARS_REGEX_PATTERN, '', args) 
+    return re.sub(SPECIAL_CHARS_REGEX_PATTERN, '', args)
+
 
 class Watcher(object):
     """
@@ -63,8 +63,8 @@ class Watcher(object):
     file_list = {}
     debug = False
 
-    def __init__(self, file_path, test_program, debug=False, custom_args='', 
-        ignore_dirs=None, quiet=False):
+    def __init__(self, file_path, test_program, debug=False, custom_args='',
+                 ignore_dirs=None, quiet=False, prefix=''):
         # Safe filter
         custom_args = escapearg(custom_args)
 
@@ -76,6 +76,7 @@ class Watcher(object):
         self.test_program = test_program
         self.custom_args = custom_args
         self.quiet = quiet
+        self.prefix = prefix
 
         # check configuration
         self.check_configuration(file_path, test_program, custom_args)
@@ -83,7 +84,6 @@ class Watcher(object):
         self.check_dependencies()
         self.debug = debug
         self.cmd = self.get_cmd()
-
 
     def check_configuration(self, file_path, test_program, custom_args):
         """Checks if configuration is ok."""
@@ -119,7 +119,7 @@ class Watcher(object):
                 sys.exit('django is not available on your system. Please install it and try to run it again')
         if self.test_program == 'phpunit':
             try:
-                process = subprocess.check_call(['phpunit','--version']) 
+                process = subprocess.check_call(['phpunit','--version'])
             except:
                 sys.exit('phpunit is not available on your system. Please install it and try to run it again')
         if self.test_program == 'tox':
@@ -127,7 +127,6 @@ class Watcher(object):
                 import tox
             except ImportError:
                 sys.exit('tox is not available on your system. Please install it and try to run it again')
-
 
     def get_cmd(self):
         """Returns the full command to be executed at runtime"""
@@ -139,6 +138,8 @@ class Watcher(object):
             executable = "%s/manage.py" % self.file_path
             if os.path.exists(executable):
                 cmd = "python %s/manage.py test" % self.file_path
+                if self.prefix:
+                    cmd = ' '.join([self.prefix, cmd])
             else:
                 cmd = "django-admin.py test"
         elif self.test_program == 'py':
@@ -201,7 +202,6 @@ class Watcher(object):
         size = sum(map(os.path.getsize, self.file_list))
         return size / 1024 / 1024
 
-
     def diff_list(self, list1, list2):
         """Extracts differences between lists. For debug purposes"""
         for key in list1:
@@ -232,6 +232,7 @@ class Watcher(object):
                 self.run_tests()
                 self.file_list = new_file_list
 
+
 def main(prog_args=None):
     """
     What do you expect?
@@ -258,6 +259,9 @@ def main(prog_args=None):
     parser.add_option('-y', '--quiet', dest='quiet', action="store_true",
         default=False,
         help="Don't ask for any input.")
+    parser.add_option(
+        '-p', '--prefix', dest='prefix', default='', type='str',
+        help='Define a prefix argument to append before the test program command.')
 
     opt, args = parser.parse_args(prog_args)
 
@@ -266,10 +270,9 @@ def main(prog_args=None):
     else:
         path = '.'
 
-
     try:
-        watcher = Watcher(path, opt.test_program, opt.debug, opt.custom_args, 
-            opt.ignore_dirs, opt.quiet)
+        watcher = Watcher(path, opt.test_program, opt.debug, opt.custom_args,
+            opt.ignore_dirs, opt.quiet, opt.prefix)
         watcher_file_size = watcher.file_sizes()
         if watcher_file_size > opt.size_max:
             message =  "It looks like the total file size (%dMb) is larger  than the `max size` option (%dMb).\nThis may slow down the file comparison process, and thus the daemon performances.\nDo you wish to continue? [y/N] " % (watcher_file_size, opt.size_max)
