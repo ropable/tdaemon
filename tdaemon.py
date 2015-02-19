@@ -138,8 +138,6 @@ class Watcher(object):
             executable = "%s/manage.py" % self.file_path
             if os.path.exists(executable):
                 cmd = "python %s/manage.py test" % self.file_path
-                if self.prefix:
-                    cmd = ' '.join([self.prefix, cmd])
             else:
                 cmd = "django-admin.py test"
         elif self.test_program == 'py':
@@ -155,6 +153,9 @@ class Watcher(object):
             cmd = 'make html'
         elif self.test_program == 'tox':
             cmd = 'tox'
+        # Add custom prefix to the start of the command.
+        if self.prefix:
+            cmd = ' '.join([self.prefix, cmd])
 
         if not cmd:
             raise InvalidTestProgram("The test program %s is unknown. Valid options are: `nose`, `django` and `py`" % self.test_program)
